@@ -26,11 +26,24 @@ class Client extends Actor with akka.actor.ActorLogging {
 
   def waitingForOpponent: Actor.Receive = {
     case war.game.GameFound =>
-      context.become(waitingForStart(sender))
+      context.become(waitingForStart)
       sender ! war.game.GameStartConfirmation
   }
 
-  def waitingForStart(game: ActorRef): Actor.Receive = {
-    case war.game.GameStart => log.info("Start game {}", sender)
+  def waitingForStart: Actor.Receive = {
+    case war.game.GameStart =>
+      context.become(inProgress)
+      sender ! war.game.Draw
+  }
+
+  def inProgress: Actor.Receive = {
+    case war.game.NextTurn =>
+      sender ! war.game.Draw
+    case war.game.GameOver =>
+      log.info("{} lost the game", self)
+      context.stop(self)
+    case war.game.Victory =>
+      log.info("{} won the game", self)
+      context.stop(self)
   }
 }
