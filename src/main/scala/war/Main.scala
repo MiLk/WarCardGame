@@ -1,8 +1,6 @@
 package war
 
 import akka.actor.{Props, Actor}
-import war.lobby.Lobby
-import war.client.Client
 
 object Main {
   def main(args: Array[String]): Unit = {
@@ -11,10 +9,12 @@ object Main {
 }
 
 class Main extends Actor with akka.actor.ActorLogging {
-  val lobbyActor = context.actorOf(Props[Lobby], "lobby")
+  // TODO Add a service discovery service
+  val gameSupervisor = context.actorOf(Props[game.GameSupervisor], "gameSupervisor")
+  val lobbyActor = context.actorOf(lobby.Lobby.props(gameSupervisor), "lobby")
 
-  val client1 = context.actorOf(Props[Client], "clientA")
-  val client2 = context.actorOf(Props[Client], "clientB")
+  val client1 = context.actorOf(Props[client.Client], "clientA")
+  val client2 = context.actorOf(Props[client.Client], "clientB")
 
   def receive = {
     case client.Connect => sender ! client.Connected(lobbyActor)

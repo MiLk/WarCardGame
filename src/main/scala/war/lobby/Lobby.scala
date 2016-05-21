@@ -1,17 +1,21 @@
 package war.lobby
 
-import akka.actor.{ActorRef, Actor}
+import akka.actor.{ActorRef, Actor, Props}
 
 // Queries
 case object Join
 case object Leave
+
 // Replies
 case object Joined
-case class OpponentFound(opponent: ActorRef)
 case object Left
 case object NotInQueue
 
-class Lobby extends Actor with akka.actor.ActorLogging {
+object Lobby {
+  def props(gameSupervisor: ActorRef): Props = Props(new Lobby(gameSupervisor))
+}
+
+class Lobby(gameSupervisor: ActorRef) extends Actor with akka.actor.ActorLogging {
 
   val waitingQueue = new scala.collection.mutable.Queue[ActorRef]
 
@@ -21,10 +25,9 @@ class Lobby extends Actor with akka.actor.ActorLogging {
       if (waitingQueue.isEmpty) {
         waitingQueue.enqueue(sender)
         sender ! Joined
-      } else {
-        val opponent = waitingQueue.dequeue
-        sender ! OpponentFound(opponent)
-        opponent ! OpponentFound(sender)
+      } else if (!waitingQueue.contains(sender)) {
+        // TODO add ack/retry
+        gameSupervisor ! war.game.CreateGame(Set(sender, waitingQueue.dequeue))
       }
     case Leave =>
       if (waitingQueue.contains(sender)) {

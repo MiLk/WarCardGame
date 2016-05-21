@@ -5,3 +5,16 @@ Implementation of the [War Card Game](https://en.wikipedia.org/wiki/War_(card_ga
 * [Akka](http://akka.io/)
 * [Scala](http://scala-lang.org/)
 
+## Instructions
+
+### Build
+
+```
+sbt compile
+```
+
+### Run
+
+```
+sbt run
+```
