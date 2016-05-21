@@ -50,31 +50,40 @@ class Game(players: Set[ActorRef]) extends Actor with akka.actor.ActorLogging {
         val newConfirmed = confirmed + sender
         if (players.diff(newConfirmed).isEmpty) {
 
-          if (decks.size == 1) {
+          val drawnCards = decks.mapValues(_.head)
+          // Remove one card from each deck
+          decks = decks.mapValues(_.tail)
+
+          drawnCards.foreach {
+            case (player, card) => log.info("{} draws a card {}", player.path.name, card)
+          }
+
+          val drawnCardList = drawnCards.values.toList
+          // TODO handle draw
+          val winnerCard = drawnCardList.maxBy(Deck.score)
+          val winnerPlayer = drawnCards.filter(_._2 == winnerCard).head._1
+
+          decks += (winnerPlayer -> (decks(winnerPlayer) ::: util.Random.shuffle(drawnCardList)))
+
+          // Filter the empty decks
+          decks = decks.filter(_._2.nonEmpty)
+
+          // Finish if we have no players left
+          if (decks.isEmpty) {
+            players.foreach(_ ! GameOver)
+            context.stop(self)
+          }
+          // Finish if we have a winner
+          else if (decks.size == 1) {
             val winner = decks.head._1
             winner ! Victory
             players.filter(_ != winner).foreach(_ ! GameOver)
             context.stop(self)
-          } else {
-            val drawnCards = decks.mapValues(_.head)
-            // Remove one card from each deck
-            decks = decks.mapValues(_.tail)
-
-            drawnCards.foreach {
-              case (player, card) => log.info("{} draws a card {}", player, card)
-            }
-
-            // Filter the empty decks
-            decks = decks.filter(_._2.nonEmpty)
-            // Send next turn to alive players
-            if (decks.nonEmpty) {
-              decks.keys.foreach(_ ! NextTurn)
-              context.become(inProgress(Set.empty[ActorRef]))
-            }
-            else {
-              players.foreach(_ ! GameOver)
-              context.stop(self)
-            }
+          }
+          // Next turn if more than 1 player are left
+          else {
+            decks.keys.foreach(_ ! NextTurn)
+            context.become(inProgress(Set.empty[ActorRef]))
           }
 
         } else context.become(inProgress(newConfirmed))
