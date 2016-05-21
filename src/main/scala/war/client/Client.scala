@@ -16,22 +16,18 @@ class Client extends Actor with akka.actor.ActorLogging {
 
   def connectionInProgress: Actor.Receive = {
     case Connected(lobbyActor) =>
-      context.become(connected)
+      context.become(connected.orElse(waitingForOpponent))
       lobbyActor ! war.lobby.Join
-  }
-
-  private def gameFound(game: ActorRef) = {
-    context.become(waitingForStart(game))
-    game ! war.game.GameStartConfirmation
   }
 
   def connected: Actor.Receive = {
     case war.lobby.Joined => context.become(waitingForOpponent)
-    case war.game.GameFound => gameFound(sender)
   }
 
   def waitingForOpponent: Actor.Receive = {
-    case war.game.GameFound => gameFound(sender)
+    case war.game.GameFound =>
+      context.become(waitingForStart(sender))
+      sender ! war.game.GameStartConfirmation
   }
 
   def waitingForStart(game: ActorRef): Actor.Receive = {
