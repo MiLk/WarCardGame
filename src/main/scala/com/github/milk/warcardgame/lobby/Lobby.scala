@@ -15,7 +15,7 @@ object Lobby {
 
 class Lobby(gameSupervisor: ActorRef) extends Actor with akka.actor.ActorLogging {
   import Lobby._
-  import com.github.milk.warcardgame.game.CreateGame
+  import com.github.milk.warcardgame.game.GameSupervisor._
 
   val waitingQueue = new scala.collection.mutable.Queue[ActorRef]
 

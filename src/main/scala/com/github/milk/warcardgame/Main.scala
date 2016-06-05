@@ -12,7 +12,7 @@ class Main extends Actor with akka.actor.ActorLogging {
   import client.Client._
 
   // TODO Add a service discovery service
-  val gameSupervisor = context.actorOf(Props[game.GameSupervisor], "gameSupervisor")
+  val gameSupervisor = context.actorOf(game.GameSupervisor.props(game.Game.props), "gameSupervisor")
   val lobbyActor = context.actorOf(lobby.Lobby.props(gameSupervisor), "lobby")
 
   val client1 = context.actorOf(Props[client.Client], "clientA")

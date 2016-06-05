@@ -2,7 +2,6 @@ package com.github.milk.warcardgame.lobby
 
 import akka.actor.{Props, Actor, ActorSystem}
 import akka.testkit.{TestProbe, TestKit}
-import com.github.milk.warcardgame.game.CreateGame
 import org.scalatest.{WordSpecLike, BeforeAndAfterAll, MustMatchers}
 
 
@@ -12,6 +11,7 @@ class LobbySpec extends TestKit(ActorSystem("LobbySpec"))
   with BeforeAndAfterAll {
 
   import Lobby._
+  import com.github.milk.warcardgame.game.GameSupervisor._
 
   override def afterAll {
     TestKit.shutdownActorSystem(system)
