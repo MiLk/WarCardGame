@@ -1,16 +1,35 @@
 package com.github.milk.warcardgame.lobby
 
-import akka.actor.{Props, Actor, ActorSystem}
-import akka.testkit.{TestProbe, TestKit}
+import akka.actor.{ActorRef, Props, ActorSystem}
+import akka.testkit.{ImplicitSender, TestProbe, TestKit}
 import org.scalatest.{WordSpecLike, BeforeAndAfterAll, MustMatchers}
 
+object TestLobby {
+  def props(gameSupervisor: ActorRef): Props = Props(new TestLobby(gameSupervisor))
+
+  case object GetWaitingQueue
+
+  case class WaitingQueue(wq: List[ActorRef])
+
+}
+
+class TestLobby(gameSupervisor: ActorRef) extends Lobby(gameSupervisor) {
+
+  import TestLobby._
+
+  override def receive = super.receive orElse {
+    case GetWaitingQueue => sender ! WaitingQueue(waitingQueue.toList)
+  }
+}
 
 class LobbySpec extends TestKit(ActorSystem("LobbySpec"))
+  with ImplicitSender
   with WordSpecLike
   with MustMatchers
   with BeforeAndAfterAll {
 
   import Lobby._
+  import TestLobby._
   import com.github.milk.warcardgame.game.GameSupervisor._
 
   override def afterAll {
@@ -93,6 +112,50 @@ class LobbySpec extends TestKit(ActorSystem("LobbySpec"))
       client1.expectMsg(NotInQueue)
       client2.send(lobby, Leave)
       client2.expectMsg(NotInQueue)
+    }
+  }
+
+  "A TestLobby Actor" must {
+    "put a client in the queue on Join message" in {
+      val client = TestProbe()
+      val gameSupervisor = TestProbe()
+      val lobby = system.actorOf(TestLobby.props(gameSupervisor.ref))
+      client.send(lobby, Join)
+      client.expectMsg(Joined)
+      gameSupervisor.expectNoMsg()
+      lobby ! GetWaitingQueue
+      expectMsg(WaitingQueue(List(client.ref)))
+      client.send(lobby, Join)
+      client.expectNoMsg()
+      lobby ! GetWaitingQueue
+      expectMsg(WaitingQueue(List(client.ref)))
+    }
+
+    "remove a client from the queue when a game is found" in {
+      val client1 = TestProbe()
+      val client2 = TestProbe()
+      val gameSupervisor = TestProbe()
+      val lobby = system.actorOf(TestLobby.props(gameSupervisor.ref))
+      client1.send(lobby, Join)
+      client2.send(lobby, Join)
+      lobby ! GetWaitingQueue
+      expectMsg(WaitingQueue(List.empty[ActorRef]))
+    }
+
+    "remove the client from the queue on Leave message" in {
+      val client = TestProbe()
+      val gameSupervisor = TestProbe()
+      val lobby = system.actorOf(TestLobby.props(gameSupervisor.ref))
+      client.send(lobby, Join)
+      client.expectMsg(Joined)
+      gameSupervisor.expectNoMsg()
+      lobby ! GetWaitingQueue
+      expectMsg(WaitingQueue(List(client.ref)))
+      client.send(lobby, Leave)
+      client.expectMsg(Left)
+      gameSupervisor.expectNoMsg()
+      lobby ! GetWaitingQueue
+      expectMsg(WaitingQueue(List.empty[ActorRef]))
     }
   }
 

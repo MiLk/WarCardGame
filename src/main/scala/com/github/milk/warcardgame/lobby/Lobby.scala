@@ -21,7 +21,7 @@ class Lobby(gameSupervisor: ActorRef) extends Actor with akka.actor.ActorLogging
 
   def receive = {
     case Join =>
-      log.info("Received join message from {}.", sender)
+      log.debug("Received join message from {}.", sender)
       if (waitingQueue.isEmpty) {
         waitingQueue.enqueue(sender)
         sender ! Joined
