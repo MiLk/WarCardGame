@@ -4,18 +4,27 @@ import akka.actor.{ActorRef, Actor, Props}
 
 object Game {
   def props(players: Set[ActorRef]): Props = Props(new Game(players))
+
   // Queries
   case object GameStartConfirmation
+
   case object Draw
+
   // Notifications
   case object GameFound
+
   case object GameStart
+
   case object NextTurn
+
   case object Victory
+
   case object GameOver
+
 }
 
 class Game(players: Set[ActorRef]) extends Actor with akka.actor.ActorLogging {
+
   import Game._
 
   players.foreach(_ ! GameFound)

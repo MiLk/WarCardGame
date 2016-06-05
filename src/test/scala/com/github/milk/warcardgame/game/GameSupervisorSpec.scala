@@ -19,7 +19,7 @@ class TestGame(players: Set[ActorRef]) extends Actor {
   }
 }
 
-class GameSupervisorSpec extends TestKit(ActorSystem("LobbySpec"))
+class GameSupervisorSpec extends TestKit(ActorSystem("GameSupervisorSpec"))
   with WordSpecLike
   with MustMatchers
   with BeforeAndAfterAll {
