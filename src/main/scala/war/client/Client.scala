@@ -2,11 +2,15 @@ package war.client
 
 import akka.actor.{Actor, ActorRef}
 
-case object Connect
-
-case class Connected(lobbyActor: ActorRef)
+object Client {
+  case object Connect
+  case class Connected(lobbyActor: ActorRef)
+}
 
 class Client extends Actor with akka.actor.ActorLogging {
+  import Client._
+  import war.lobby.Lobby._
+  import war.game.Game._
 
   override def preStart(): Unit = {
     context.parent ! Connect
@@ -14,35 +18,37 @@ class Client extends Actor with akka.actor.ActorLogging {
 
   def receive = connectionInProgress
 
+  // Communication with Lobby actor
   def connectionInProgress: Actor.Receive = {
     case Connected(lobbyActor) =>
       context.become(connected.orElse(waitingForOpponent))
-      lobbyActor ! war.lobby.Join
+      lobbyActor ! Join
   }
 
   def connected: Actor.Receive = {
-    case war.lobby.Joined => context.become(waitingForOpponent)
+    case Joined => context.become(waitingForOpponent)
   }
 
+  // Communication with Game actor
   def waitingForOpponent: Actor.Receive = {
-    case war.game.GameFound =>
+    case GameFound =>
       context.become(waitingForStart)
-      sender ! war.game.GameStartConfirmation
+      sender ! GameStartConfirmation
   }
 
   def waitingForStart: Actor.Receive = {
-    case war.game.GameStart =>
+    case GameStart =>
       context.become(inProgress)
-      sender ! war.game.Draw
+      sender ! Draw
   }
 
   def inProgress: Actor.Receive = {
-    case war.game.NextTurn =>
-      sender ! war.game.Draw
-    case war.game.GameOver =>
+    case NextTurn =>
+      sender ! Draw
+    case GameOver =>
       log.info("{} lost the game", self)
       context.stop(self)
-    case war.game.Victory =>
+    case Victory =>
       log.info("{} won the game", self)
       context.stop(self)
   }

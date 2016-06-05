@@ -9,6 +9,8 @@ object Main {
 }
 
 class Main extends Actor with akka.actor.ActorLogging {
+  import client.Client._
+
   // TODO Add a service discovery service
   val gameSupervisor = context.actorOf(Props[game.GameSupervisor], "gameSupervisor")
   val lobbyActor = context.actorOf(lobby.Lobby.props(gameSupervisor), "lobby")
@@ -20,7 +22,7 @@ class Main extends Actor with akka.actor.ActorLogging {
   var terminated = 0
 
   def receive = {
-    case client.Connect => sender ! client.Connected(lobbyActor)
+    case Connect => sender ! Connected(lobbyActor)
     case Terminated(child) =>
       if (terminated == 0) terminated = 1
       else context.stop(self)

@@ -2,20 +2,19 @@ package war.lobby
 
 import akka.actor.{ActorRef, Actor, Props}
 
-// Queries
-case object Join
-case object Leave
-
-// Replies
-case object Joined
-case object Left
-case object NotInQueue
-
 object Lobby {
   def props(gameSupervisor: ActorRef): Props = Props(new Lobby(gameSupervisor))
+  // Queries
+  case object Join
+  case object Leave
+  // Notifications
+  case object Joined
+  case object Left
+  case object NotInQueue
 }
 
 class Lobby(gameSupervisor: ActorRef) extends Actor with akka.actor.ActorLogging {
+  import Lobby._
 
   val waitingQueue = new scala.collection.mutable.Queue[ActorRef]
 
