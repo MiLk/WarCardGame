@@ -18,3 +18,10 @@ sbt compile
 ```
 sbt run
 ```
+
+### Test
+
+```
+sbt test
+```
+
