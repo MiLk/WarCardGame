@@ -1,4 +1,4 @@
-package war.game
+package com.github.milk.warcardgame.game
 
 object Deck {
   val cardValues: List[String] = "JOKER" :: List("A", "K", "Q", "J") ::: (2 to 10).reverse.toList.map(_.toString)

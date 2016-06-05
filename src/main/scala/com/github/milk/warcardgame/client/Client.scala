@@ -1,4 +1,4 @@
-package war.client
+package com.github.milk.warcardgame.client
 
 import akka.actor.{Actor, ActorRef}
 
@@ -9,8 +9,8 @@ object Client {
 
 class Client extends Actor with akka.actor.ActorLogging {
   import Client._
-  import war.lobby.Lobby._
-  import war.game.Game._
+  import com.github.milk.warcardgame.lobby.Lobby._
+  import com.github.milk.warcardgame.game.Game._
 
   override def preStart(): Unit = {
     context.parent ! Connect

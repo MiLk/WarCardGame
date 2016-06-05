@@ -1,4 +1,4 @@
-package war.lobby
+package com.github.milk.warcardgame.lobby
 
 import akka.actor.{ActorRef, Actor, Props}
 
@@ -15,6 +15,7 @@ object Lobby {
 
 class Lobby(gameSupervisor: ActorRef) extends Actor with akka.actor.ActorLogging {
   import Lobby._
+  import com.github.milk.warcardgame.game.CreateGame
 
   val waitingQueue = new scala.collection.mutable.Queue[ActorRef]
 
@@ -26,7 +27,7 @@ class Lobby(gameSupervisor: ActorRef) extends Actor with akka.actor.ActorLogging
         sender ! Joined
       } else if (!waitingQueue.contains(sender)) {
         // TODO add ack/retry
-        gameSupervisor ! war.game.CreateGame(Set(sender, waitingQueue.dequeue))
+        gameSupervisor ! CreateGame(Set(sender, waitingQueue.dequeue))
       }
     case Leave =>
       if (waitingQueue.contains(sender)) {

@@ -1,4 +1,4 @@
-package war
+package com.github.milk.warcardgame
 
 import akka.actor.{Props, Actor,Terminated}
 

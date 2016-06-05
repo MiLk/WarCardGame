@@ -1,4 +1,4 @@
-package war.game
+package com.github.milk.warcardgame.game
 
 import akka.actor.{Actor, ActorRef}
 
