@@ -6,9 +6,9 @@ object Deck {
 
   private def newDeck: List[String] = util.Random.shuffle(cardValues ::: cardValues ::: cardValues.tail ::: cardValues.tail)
 
-  def generatePlayersDecks: (List[String], List[String]) = {
+  def generatePlayersDecks: (Deck, Deck) = {
     val deck = newDeck
-    (deck.take(deckSize / 2), deck.takeRight(deckSize / 2))
+    (new Deck(deck.take(deckSize / 2)), new Deck(deck.takeRight(deckSize / 2)))
   }
 
   def score(a: String): Int = a match {
@@ -25,4 +25,18 @@ object Deck {
     case _ => 0
   }
 
+}
+
+class Deck(var cards: List[String]) {
+  def draw: String = {
+    val drawn = cards.head
+    cards = cards.tail
+    drawn
+  }
+
+  def append(wonCards: List[String]): Unit = {
+    cards = cards ::: util.Random.shuffle(wonCards)
+  }
+
+  def nonEmpty = cards.nonEmpty
 }

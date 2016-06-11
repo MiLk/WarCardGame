@@ -29,7 +29,7 @@ class Game(players: Set[ActorRef]) extends Actor with akka.actor.ActorLogging {
 
   players.foreach(_ ! GameFound)
 
-  var decks: Map[ActorRef, List[String]] = Map.empty[ActorRef, List[String]]
+  var decks: Map[ActorRef, Deck] = Map.empty[ActorRef, Deck]
 
   def waitingForConfirmation(confirmed: Set[ActorRef], state: Set[ActorRef] => Actor.Receive)(block: => Unit): Unit = {
     if (!confirmed.contains(sender)) {
@@ -57,20 +57,18 @@ class Game(players: Set[ActorRef]) extends Actor with akka.actor.ActorLogging {
     case Draw =>
       waitingForConfirmation(confirmed, inProgress) {
 
-        val drawnCards = decks.mapValues(_.head)
-        // Remove one card from each deck
-        decks = decks.mapValues(_.tail)
+        val drawnCards = decks.mapValues(_.draw).toList
 
         drawnCards.foreach {
           case (player, card) => log.info("{} draws a card {}", player.path.name, card)
         }
 
-        val drawnCardList = drawnCards.values.toList
+        val drawnCardList = drawnCards.map(_._2)
         // TODO handle draw
         val winnerCard = drawnCardList.maxBy(Deck.score)
         val winnerPlayer = drawnCards.filter(_._2 == winnerCard).head._1
 
-        decks += (winnerPlayer -> (decks(winnerPlayer) ::: util.Random.shuffle(drawnCardList)))
+        decks(winnerPlayer) append drawnCardList
 
         // Filter the empty decks
         decks = decks.filter(_._2.nonEmpty)
