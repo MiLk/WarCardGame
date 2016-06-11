@@ -17,12 +17,11 @@ object Deck {
     case "K" => 13
     case "Q" => 12
     case "J" => 11
-    case s: String => try {
-      s.toInt
+    case _ => try {
+      a.toInt
     } catch {
       case _: NumberFormatException => 0
     }
-    case _ => 0
   }
 
 }
