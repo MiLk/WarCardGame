@@ -29,8 +29,6 @@ class Game(players: Set[ActorRef]) extends Actor with akka.actor.ActorLogging {
 
   players.foreach(_ ! GameFound)
 
-  var decks: Map[ActorRef, Deck] = Map.empty[ActorRef, Deck]
-
   def waitingForConfirmation(confirmed: Set[ActorRef], state: Set[ActorRef] => Actor.Receive)(block: => Unit): Unit = {
     if (!confirmed.contains(sender)) {
       val newConfirmed = confirmed + sender
@@ -46,16 +44,15 @@ class Game(players: Set[ActorRef]) extends Actor with akka.actor.ActorLogging {
     case GameStartConfirmation =>
       waitingForConfirmation(confirmed, waitingForStart) {
         val deck = Deck.generatePlayersDecks
-        decks += (players.head -> deck._1)
-        decks += (players.tail.head -> deck._2)
+        val decks = Map(players.head -> deck._1, players.tail.head -> deck._2)
         players.foreach(player => player ! GameStart)
-        context.become(inProgress(Set.empty[ActorRef]))
+        context.become(inProgress(decks)(Set.empty[ActorRef]))
       }
   }
 
-  def inProgress(confirmed: Set[ActorRef]): Actor.Receive = {
+  def inProgress(decks: Map[ActorRef, Deck])(confirmed: Set[ActorRef]): Actor.Receive = {
     case Draw =>
-      waitingForConfirmation(confirmed, inProgress) {
+      waitingForConfirmation(confirmed, inProgress(decks)) {
 
         val drawnCards = decks.mapValues(_.draw).toList
 
@@ -70,25 +67,25 @@ class Game(players: Set[ActorRef]) extends Actor with akka.actor.ActorLogging {
 
         decks(winnerPlayer) append drawnCardList
 
-        // Filter the empty decks
-        decks = decks.filter(_._2.nonEmpty)
+        // Get the players left by filtering the empty decks
+        val playersLeft = decks.filter(_._2.nonEmpty).keys
 
         // Finish if we have no players left
-        if (decks.isEmpty) {
+        if (playersLeft.isEmpty) {
           players.foreach(_ ! GameOver)
           context.stop(self)
         }
         // Finish if we have a winner
-        else if (decks.size == 1) {
-          val winner = decks.head._1
+        else if (playersLeft.size == 1) {
+          val winner = playersLeft.head
           winner ! Victory
           players.filter(_ != winner).foreach(_ ! GameOver)
           context.stop(self)
         }
         // Next turn if more than 1 player are left
         else {
-          decks.keys.foreach(_ ! NextTurn)
-          context.become(inProgress(Set.empty[ActorRef]))
+          playersLeft.foreach(_ ! NextTurn)
+          context.become(inProgress(decks)(Set.empty[ActorRef]))
         }
       }
   }
