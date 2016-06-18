@@ -3,17 +3,22 @@ package com.github.milk.warcardgame.game
 import akka.actor.{Actor, ActorRef, Props}
 
 object GameSupervisor {
-  def props(gameActorProps: Set[ActorRef] => Props): Props = Props(new GameSupervisor(gameActorProps))
+  def props: Props = Props(new GameSupervisor with GamePropsProvider)
 
   case class CreateGame(players: Set[ActorRef])
 
 }
 
-class GameSupervisor(gameActorProps: Set[ActorRef] => Props) extends Actor with akka.actor.ActorLogging {
+trait GamePropsProvider {
+  def gameProps: Set[ActorRef] => Props = Game.props
+}
+
+class GameSupervisor extends Actor with akka.actor.ActorLogging {
+  this: GamePropsProvider =>
 
   import GameSupervisor._
 
   def receive = {
-    case CreateGame(players) => context.actorOf(gameActorProps(players))
+    case CreateGame(players) => context.actorOf(gameProps(players))
   }
 }

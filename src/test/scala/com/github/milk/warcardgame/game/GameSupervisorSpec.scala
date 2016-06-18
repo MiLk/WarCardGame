@@ -19,6 +19,10 @@ class TestGame(players: Set[ActorRef]) extends Actor {
   }
 }
 
+trait TestGamePropsProvider extends GamePropsProvider {
+  override def gameProps = TestGame.props
+}
+
 class GameSupervisorSpec extends TestKit(ActorSystem("GameSupervisorSpec"))
   with WordSpecLike
   with MustMatchers
@@ -33,7 +37,7 @@ class GameSupervisorSpec extends TestKit(ActorSystem("GameSupervisorSpec"))
 
   "A GameSupervisor actor" must {
     "create a new game for the specified players" in {
-      val gameSupervisor = system.actorOf(GameSupervisor.props(TestGame.props))
+      val gameSupervisor = system.actorOf(Props(new GameSupervisor with TestGamePropsProvider))
       val lobby = TestProbe()
       val client1 = TestProbe()
       val client2 = TestProbe()
