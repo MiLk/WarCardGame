@@ -35,4 +35,11 @@ class ApiController @Inject()(system: ActorSystem)(implicit exec: ExecutionConte
       msg <- (clientActor ? client.Client.JoinQueue).mapTo[String]
     } yield Ok(msg)
   }
+
+  def draw(id: String) = Action.async {
+    for {
+      clientActor <- (clientSupervisor ? client.ClientSupervisor.Get(id)).mapTo[ActorRef]
+      msg <- (clientActor ? client.Client.Draw).mapTo[String]
+    } yield Ok(msg)
+  }
 }

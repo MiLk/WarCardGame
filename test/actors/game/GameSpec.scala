@@ -37,7 +37,10 @@ class GameSpec extends TestKit(ActorSystem("GameSpec"))
       players foreach (_ send(game, GameStartConfirmation))
       players foreach (_ expectMsg GameStart)
       players foreach (_ send(game, Draw))
-      players foreach (_ expectMsg NextTurn)
+      players foreach (_.expectMsgPF() {
+        case NextTurn(drawnCards)
+          if drawnCards.size == 2 => ()
+      })
     }
   }
 }

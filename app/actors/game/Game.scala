@@ -15,7 +15,7 @@ object Game {
 
   case object GameStart
 
-  case object NextTurn
+  case class NextTurn(drawnCards: List[(String, String)])
 
   case object Victory
 
@@ -84,7 +84,9 @@ class Game(players: Set[ActorRef]) extends Actor with akka.actor.ActorLogging {
         }
         // Next turn if more than 1 player are left
         else {
-          playersLeft.foreach(_ ! NextTurn)
+          playersLeft.foreach(_ ! NextTurn(drawnCards.map {
+            case (ref: ActorRef, card: String) => (ref.path.name, card)
+          }))
           context.become(inProgress(decks)(Set.empty[ActorRef]))
         }
       }

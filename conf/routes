@@ -13,4 +13,5 @@ GET        /message                controllers.AsyncController.message
 GET        /assets/*file           controllers.Assets.versioned(path="/public", file: Asset)
 
 GET        /api/connect/:id        controllers.ApiController.connect(id: String)
-GET        /api/join/:id        controllers.ApiController.join(id: String)
+GET        /api/join/:id           controllers.ApiController.join(id: String)
+GET        /api/draw/:id           controllers.ApiController.draw(id: String)
