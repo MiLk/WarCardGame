@@ -8,7 +8,6 @@ object Lobby {
   case object Join
   case object Leave
   // Notifications
-  case object Joined
   case object Left
   case object NotInQueue
 }
@@ -16,6 +15,7 @@ object Lobby {
 class Lobby(gameSupervisor: ActorRef) extends Actor with akka.actor.ActorLogging {
   import Lobby._
   import actors.game.GameSupervisor._
+  import actors.client.Client
 
   val waitingQueue = new scala.collection.mutable.Queue[ActorRef]
 
@@ -24,8 +24,9 @@ class Lobby(gameSupervisor: ActorRef) extends Actor with akka.actor.ActorLogging
       log.debug("Received join message from {}.", sender)
       if (waitingQueue.isEmpty) {
         waitingQueue.enqueue(sender)
-        sender ! Joined
+        sender ! Client.QueueJoined
       } else if (!waitingQueue.contains(sender)) {
+        sender ! Client.QueueJoined
         // TODO add ack/retry
         gameSupervisor ! CreateGame(Set(sender, waitingQueue.dequeue))
       }

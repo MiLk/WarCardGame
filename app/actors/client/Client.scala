@@ -1,47 +1,58 @@
 package actors.client
 
-import akka.actor.{Actor, ActorRef}
+import akka.actor.{Actor, ActorRef, Props}
 
 object Client {
-  case object Connect
-  case class Connected(lobbyActor: ActorRef)
+  def props(lobby: ActorRef) = Props(new Client(lobby))
+
+  case object JoinQueue
+  case object QueueJoined
 }
 
-class Client extends Actor with akka.actor.ActorLogging {
-  import Client._
-  import actors.lobby.Lobby._
+class Client(lobby: ActorRef) extends Actor with akka.actor.ActorLogging {
+  import actors.lobby.Lobby
   import actors.game.Game._
+  import Client._
 
-  override def preStart(): Unit = {
-    context.parent ! Connect
+  def receive = standBy
+
+  // The client is not in the queue yet
+  def standBy: Actor.Receive = {
+    case JoinQueue =>
+      log.debug("Join Queue")
+      lobby ! Lobby.Join
+      context.become(waitingForQueueConfirmation(sender))
   }
 
-  def receive = connectionInProgress
-
-  // Communication with Lobby actor
-  def connectionInProgress: Actor.Receive = {
-    case Connected(lobbyActor) =>
-      context.become(connected.orElse(waitingForOpponent))
-      lobbyActor ! Join
+  def waitingForQueueConfirmation(replyTo: ActorRef): Actor.Receive = {
+    case QueueJoined =>
+      log.debug("Queue joined")
+      context.become(waitingForOpponent)
+      replyTo ! "You have joined the waiting queue."
+    case JoinQueue =>
+      replyTo ! "Waiting for confirmation from the lobby."
   }
 
-  def connected: Actor.Receive = {
-    case Joined => context.become(waitingForOpponent)
-  }
-
-  // Communication with Game actor
+  // The client is in the queue and waiting for an opponent
   def waitingForOpponent: Actor.Receive = {
     case GameFound =>
+      log.debug("Game found")
       context.become(waitingForStart)
       sender ! GameStartConfirmation
+    case JoinQueue =>
+      sender ! "You are already in queue."
   }
 
+  // The game has been found and waiting for it to start
   def waitingForStart: Actor.Receive = {
     case GameStart =>
       context.become(inProgress)
       sender ! Draw
+    case JoinQueue =>
+      sender ! "You can't do that while waiting for the game to start."
   }
 
+  // The game is in progress
   def inProgress: Actor.Receive = {
     case NextTurn =>
       sender ! Draw
@@ -51,5 +62,7 @@ class Client extends Actor with akka.actor.ActorLogging {
     case Victory =>
       log.info("{} won the game", self)
       context.stop(self)
+    case JoinQueue =>
+      sender ! "You can't do that while a game is in progress."
   }
 }
