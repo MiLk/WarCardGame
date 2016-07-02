@@ -1,6 +1,7 @@
 package actors.lobby
 
 import akka.actor.{ActorRef, Actor, Props}
+import javax.inject._
 
 object Lobby {
   def props(gameSupervisor: ActorRef): Props = Props(new Lobby(gameSupervisor))
@@ -12,7 +13,7 @@ object Lobby {
   case object NotInQueue
 }
 
-class Lobby(gameSupervisor: ActorRef) extends Actor with akka.actor.ActorLogging {
+class Lobby @Inject() (@Named("gameSupervisor") gameSupervisor: ActorRef) extends Actor with akka.actor.ActorLogging {
   import Lobby._
   import actors.game.GameSupervisor._
   import actors.client.Client
