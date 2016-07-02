@@ -6,3 +6,5 @@ target
 tmp
 dist
 .cache
+.sbtserver
+project/.sbtserver.lock
