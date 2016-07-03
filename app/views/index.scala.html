@@ -1,0 +1,36 @@
+@*
+* Call the `main` template with two arguments. The first
+* argument is a `String` with the title of the page, the second
+* argument is an `Html` object containing the body of the page.
+*@
+@main("War Card Game") {
+  <div id="connecting">
+    <p>
+      Connection in progress....
+    </p>
+  </div>
+  <div id="standby">
+    <p>
+      You are now connected to the game server.
+    </p>
+    <p>
+      <button id="joinQueue">Join queue</button>
+    </p>
+  </div>
+  <div id="inqueue">
+    <p>
+      <button id="leaveQueue">Leave queue</button>
+    </p>
+  </div>
+  <div id="ingame">
+    <p>
+      <button id="draw">Draw card</button>
+    </p>
+  </div>
+  <div id="disconnected">
+    <p>
+      You have been disconnected.<br />
+      Please refresh the page to reconnect.
+    </p>
+  </div>
+}

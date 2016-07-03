@@ -10,19 +10,19 @@ Implementation of the [War Card Game](https://en.wikipedia.org/wiki/War_(card_ga
 ### Build
 
 ```
-sbt compile
+./bin/activator compile
 ```
 
 ### Run
 
 ```
-sbt run
+./bin/activator run
 ```
 
 ### Test
 
 ```
-sbt test
+./bin/activator test
 ```
 
 ### Code coverage
