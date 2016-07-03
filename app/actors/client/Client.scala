@@ -15,6 +15,7 @@ class Client(lobby: ActorRef, connection: ActorRef) extends Actor {
   import actors.lobby.Lobby
   import actors.game.Game
   import Client._
+  import Connection.Message
 
   def receive = standBy
 
@@ -31,7 +32,7 @@ class Client(lobby: ActorRef, connection: ActorRef) extends Actor {
   def waitingForQueueConfirmation: Actor.Receive = {
     case QueueJoined =>
       context.become(waitingForOpponent)
-      connection ! "You have joined the waiting queue. Waiting for an opponent."
+      connection ! Message("You have joined the waiting queue. Waiting for an opponent.", "InQueue")
     case JoinQueue =>
       connection ! "Waiting for confirmation from the lobby."
     case Draw =>
@@ -43,7 +44,7 @@ class Client(lobby: ActorRef, connection: ActorRef) extends Actor {
     case Game.GameFound =>
       context.become(waitingForStart)
       sender ! Game.GameStartConfirmation
-      connection ! "An opponent has been found. Waiting for the game to start."
+      connection ! Message("An opponent has been found. Waiting for the game to start.", "InQueue")
     case JoinQueue =>
       sender ! "You are already in queue."
     case Draw =>
@@ -54,7 +55,7 @@ class Client(lobby: ActorRef, connection: ActorRef) extends Actor {
   def waitingForStart: Actor.Receive = {
     case Game.GameStart =>
       context.become(inProgress(sender))
-      connection ! "The Game has started. You can now draw a card."
+      connection ! Message("The Game has started. You can now draw a card.","InGame")
     case JoinQueue =>
       sender ! "You can't do that while waiting for the game to start."
     case Draw =>

@@ -22,16 +22,12 @@ object WebSocketActor {
   case class Success(fields: Seq[(String, JsValue)]) extends WebSocketReply {
     def toJsObject: JsObject = JsObject(Seq("type" -> JsString("success")) ++ fields)
   }
-
-  def generateId : String = java.util.UUID.randomUUID.toString
 }
 
-class WebSocketActor(clientSupervisor: ActorRef, out: ActorRef) extends Actor with Stash {
+class WebSocketActor(clientSupervisor: ActorRef, out: ActorRef) extends Actor with Stash with Connection {
 
   import WebSocketActor._
   import actors.client
-
-  val id = generateId
 
   clientSupervisor ! client.ClientSupervisor.Get(id, self)
 
@@ -57,6 +53,7 @@ class WebSocketActor(clientSupervisor: ActorRef, out: ActorRef) extends Actor wi
   }
 
   def receiveMessageFromActorSystem: Actor.Receive = {
+    case msg: Connection.Message => out ! Success(msg.toSeq).toJsObject
     case msg: String => out ! JsString(msg)
   }
 
