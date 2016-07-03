@@ -13,3 +13,6 @@ trim_trailing_whitespace = true
 [*.md]
 # Preserve trailing whitespace for Markdown files
 trim_trailing_whitespace = false
+
+[*.html]
+indent_size = 4
