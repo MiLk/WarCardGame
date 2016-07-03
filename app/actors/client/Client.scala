@@ -1,92 +1,116 @@
 package actors.client
 
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{ActorRef, Props, FSM}
 
 object Client {
   def props(lobby: ActorRef, connection: ActorRef) = Props(new Client(lobby, connection))
 
-  case object Connect
-  case object JoinQueue
-  case object QueueJoined
-  case object Draw
+  // events
+  sealed trait PlayerEvent
+  case object JoinQueue extends PlayerEvent
+  case object Draw extends PlayerEvent
+
+  sealed trait GameEvent
+  case object QueueJoined extends GameEvent
+
+  // states
+  sealed trait State
+  case object StandBy extends State
+  case object JoiningQueue extends State
+  case object InQueue extends State
+  case object WaitingForStart extends State
+  case object InProgress extends State
+  case object WaitingNextTurn extends State
+
+  // data
+  sealed trait Data
+  case object OutGame extends Data
+  case class InGame(gameActor: ActorRef) extends Data
+
 }
 
-class Client(lobby: ActorRef, connection: ActorRef) extends Actor {
+class Client(lobby: ActorRef, connection: ActorRef) extends FSM[Client.State, Client.Data] {
+
   import actors.lobby.Lobby
   import actors.game.Game
   import Client._
-  import Connection.Message
+  import Connection.{SuccessMessage, ErrorMessage}
 
-  def receive = standBy
+  startWith(StandBy, OutGame)
 
   // The client is not in the queue yet
-  def standBy: Actor.Receive = {
-    case JoinQueue =>
+  when(StandBy) {
+    case Event(JoinQueue, _) =>
       lobby ! Lobby.Join
-      context.become(waitingForQueueConfirmation)
-    case Draw =>
-      sender ! "You must join the queue first."
+      goto(JoiningQueue)
   }
 
   // The client has requested to join the queue
-  def waitingForQueueConfirmation: Actor.Receive = {
-    case QueueJoined =>
-      context.become(waitingForOpponent)
-      connection ! Message("You have joined the waiting queue. Waiting for an opponent.", "InQueue")
-    case JoinQueue =>
-      connection ! "Waiting for confirmation from the lobby."
-    case Draw =>
-      sender ! "No game has been found yet."
+  when(JoiningQueue) {
+    case Event(QueueJoined, _) =>
+      connection ! SuccessMessage("You have joined the waiting queue. Waiting for an opponent.", "InQueue")
+      goto(InQueue)
+    case Event(JoinQueue, _) =>
+      connection ! ErrorMessage("Waiting for confirmation from the lobby.", "JoiningQueue")
+      stay
   }
 
   // The client is in the queue and waiting for an opponent
-  def waitingForOpponent: Actor.Receive = {
-    case Game.GameFound =>
-      context.become(waitingForStart)
+  when(InQueue) {
+    case Event(Game.GameFound, _) =>
       sender ! Game.GameStartConfirmation
-      connection ! Message("An opponent has been found. Waiting for the game to start.", "InQueue")
-    case JoinQueue =>
-      sender ! "You are already in queue."
-    case Draw =>
-      sender ! "No game has been found yet."
+      connection ! SuccessMessage("An opponent has been found. Waiting for the game to start.", "WaitingForStart")
+      goto(WaitingForStart)
+    case Event(JoinQueue, _) =>
+      connection ! ErrorMessage("You are already in queue.", "InQueue")
+      stay
   }
 
   // The game has been found and waiting for it to start
-  def waitingForStart: Actor.Receive = {
-    case Game.GameStart =>
-      context.become(inProgress(sender))
-      connection ! Message("The Game has started. You can now draw a card.","InGame")
-    case JoinQueue =>
-      sender ! "You can't do that while waiting for the game to start."
-    case Draw =>
-      sender ! "The game has not started yet."
+  when(WaitingForStart) {
+    case Event(Game.GameStart, _) =>
+      connection ! SuccessMessage("The Game has started. You can now draw a card.", "InProgress")
+      goto(InProgress) using InGame(sender)
   }
 
   // The game is in progress
-  def inProgress(gameActor: ActorRef): Actor.Receive = {
-    case Draw =>
+  when(InProgress) {
+    case Event(Draw, InGame(gameActor)) =>
       gameActor ! Game.Draw
-      context.become(waitingNextTurn)
-    case JoinQueue =>
-      sender ! "You can't do that while a game is in progress."
+      connection ! SuccessMessage("Waiting for the other player to Draw.", "InProgress")
+      goto(WaitingNextTurn)
   }
 
   // Waiting for the game actor to end the turn
-  def waitingNextTurn: Actor.Receive = {
-    case Game.NextTurn(drawnCards) =>
-      connection ! drawnCards.map {
+  when(WaitingNextTurn) {
+    case Event(Game.NextTurn(drawnCards), _) =>
+      connection ! SuccessMessage(drawnCards.map {
         case (name, card) => s"$name has drawn $card"
-      }.mkString("\n")
-      context.become(inProgress(sender))
-    case Game.GameOver =>
-      connection ! s"$self lost the game"
-      context.stop(self)
-    case Game.Victory =>
-      connection ! s"$self won the game"
-      context.stop(self)
-    case JoinQueue =>
-      sender ! "You can't do that while a game is in progress."
-    case Draw =>
-      sender ! "Still waiting for the other player to Draw."
+      }.mkString("\n"), "InProgress")
+      goto(InProgress)
+    case Event(Game.GameOver, _) =>
+      connection ! SuccessMessage("You lost the game.", "GameFinished")
+      stop
+    case Event(Game.Victory, _) =>
+      connection ! SuccessMessage("You won the game.", "GameFinished")
+      stop
+    case Event(Draw, _) =>
+      sender ! ErrorMessage("Still waiting for the other player to Draw.", "WaitingNextTurn")
+      stay
   }
+
+  whenUnhandled {
+    case Event(Draw, OutGame) =>
+      sender ! "You must be in game to draw a card."
+      stay
+    case Event(JoinQueue, InGame(_)) =>
+      sender ! "You can not do that while a game is in progress."
+      stay
+  }
+
+  onTermination {
+    case StopEvent(_, _, _) => context.stop(self)
+  }
+
+  initialize()
 }

@@ -3,43 +3,83 @@
 const State = {
   Connecting: 0,
   StandBy: 1,
-  InQueue: 2,
-  InGame: 3,
-  Disconnected: 4
+  JoiningQueue: 2,
+  InQueue: 3,
+  WaitingForStart: 4,
+  InProgress: 5,
+  WaitingNextTurn: 6,
+  Disconnected: 7
 };
+
+class DOMHelper {
+  static hideAll() {
+    let bodyChildren = document.body.children;
+    for (let i = 0; i < bodyChildren.length; ++i) {
+      let el = bodyChildren[i];
+      if (el.id && el.id !== 'messages') {
+        el.style.display = 'none'
+      }
+    }
+  }
+
+  static show(id) {
+    document.getElementById(id).style.display = 'block';
+  }
+}
 
 class GameState {
   constructor() {
     this._state = State.Connecting;
-    document.getElementById('connecting').style.display = 'block';
+    DOMHelper.hideAll();
   }
 
-  changeState(state) {
-    console.log('changeState', state);
+  setMessage(text) {
+    if (!this._messageBox) {
+      this._messageBox = document.getElementById('messages').firstElementChild;
+    }
+    this._messageBox.textContent = text;
+  }
+
+  setError(message, description) {
+    if (!this._messageBox) {
+      this._messageBox = document.getElementById('messages').firstElementChild;
+    }
+    this._messageBox.innerHTML = '<strong>' + message + '</strong><br />' + description;
+  }
+
+  changeState(state, msg) {
     switch (state) {
       case State.StandBy:
-        document.getElementById('connecting').style.display = 'none';
-        document.getElementById('standby').style.display = 'block';
+        DOMHelper.hideAll();
+        DOMHelper.show('standby');
+        break;
+      case State.JoiningQueue:
+        DOMHelper.hideAll();
         break;
       case State.InQueue:
-        document.getElementById('standby').style.display = 'none';
+        DOMHelper.hideAll();
+        DOMHelper.show('inqueue');
         document.getElementById('inqueue').style.display = 'block';
         break;
-      case State.InGame:
-        document.getElementById('inqueue').style.display = 'none';
-        document.getElementById('ingame').style.display = 'block';
+      case State.WaitingForStart:
+        DOMHelper.hideAll();
+        break;
+      case State.InProgress:
+        DOMHelper.hideAll();
+        DOMHelper.show('inprogress');
+        break;
+      case State.WaitingNextTurn:
+        DOMHelper.hideAll();
         break;
       case State.Disconnected:
-        let bodyChildren = document.body.children;
-        for (let i = 0; i < bodyChildren.length; ++i) {
-          bodyChildren[i].style.display = 'none'
-        }
-        document.getElementById('disconnected').style.display = 'block';
+        DOMHelper.hideAll();
+        msg = msg || 'You have been disconnected.';
         break;
       default:
         return;
     }
     this._state = state;
+    this.setMessage(msg || '');
   }
 
   get state() {
@@ -60,12 +100,16 @@ function start() {
   ws.onmessage = function (event) {
     try {
       let msg = JSON.parse(event.data);
-      if (typeof msg === 'object' && msg.state && msg.msg) {
-        let state = msg.state;
-        if (State.hasOwnProperty(state)) {
-          gameState.changeState(State[state]);
+      if (typeof msg === 'object' && msg.type && msg.message) {
+        let type = msg.type;
+        if (type === 'error' && msg.description) {
+          gameState.setError(msg.message, msg.description);
+        } else if(type === 'success' && msg.state) {
+          let state = msg.state;
+          if (State.hasOwnProperty(state)) {
+            gameState.changeState(State[state], msg.message);
+          }
         }
-        console.log('message received:', msg.msg);
         return;
       }
     } catch (e) {
@@ -85,8 +129,13 @@ function start() {
       return;
     }
 
-    if (ws.readyState != 1) {
-      console.error('The WebSocket connection is not ready or already closed.');
+    if (ws.readyState == 0) {
+      console.error('The WebSocket connection is not ready.');
+      return;
+    }
+
+    if (ws.readyState > 1) {
+      gameState.changeState(State.Disconnected);
       return;
     }
 

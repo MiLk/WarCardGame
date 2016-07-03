@@ -22,6 +22,7 @@ object WebSocketActor {
   case class Success(fields: Seq[(String, JsValue)]) extends WebSocketReply {
     def toJsObject: JsObject = JsObject(Seq("type" -> JsString("success")) ++ fields)
   }
+
 }
 
 class WebSocketActor(clientSupervisor: ActorRef, out: ActorRef) extends Actor with Stash with Connection {
@@ -38,7 +39,7 @@ class WebSocketActor(clientSupervisor: ActorRef, out: ActorRef) extends Actor wi
     case _ => stash()
   }
 
-  def receiveMessagesFromWebSocket(clientActor: ActorRef) : Actor.Receive = {
+  def receiveMessagesFromWebSocket(clientActor: ActorRef): Actor.Receive = {
     case msg: JsObject if msg.value.contains("action") =>
       val action = msg.value("action")
       action match {
@@ -53,8 +54,8 @@ class WebSocketActor(clientSupervisor: ActorRef, out: ActorRef) extends Actor wi
   }
 
   def receiveMessageFromActorSystem: Actor.Receive = {
-    case msg: Connection.Message => out ! Success(msg.toSeq).toJsObject
-    case msg: String => out ! JsString(msg)
+    case msg: Connection.SuccessMessage => out ! Success(msg.toSeq).toJsObject
+    case msg: Connection.ErrorMessage => out ! Error("Error", msg.msg).toJsObject
   }
 
   def initialized(clientActor: ActorRef) = receiveMessagesFromWebSocket(clientActor) orElse receiveMessageFromActorSystem
