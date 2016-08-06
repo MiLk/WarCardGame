@@ -17,6 +17,11 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-mocha" % "1.1.0")
 
 addSbtPlugin("org.irundaia.sbt" % "sbt-sassify" % "1.4.2")
 
+// Scala.js
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.11")
+
+addSbtPlugin("com.vmunier" % "sbt-play-scalajs" % "0.3.1")
+
 // Custom
 logLevel := Level.Warn
 
